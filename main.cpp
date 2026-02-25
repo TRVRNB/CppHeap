@@ -1,69 +1,163 @@
-// https://github.com/TRVRNB/CppHeap.git
-// this is a heap binary tree, a simple data structure that might end up being surprisingly complicated to implement
+// stores a list of students, their ID, and their GPA
+// has ADD, PRINT, DELETE, and HELP functions
 #include <iostream>
+#include <cstring> // for strcmp()
+#include <cstdlib> // for strtol() + strtof()
 #include <cmath> // for round()
-// apparently i might not actually need nodes for this
+#include "student.h"
+#include "node.h"
 using namespace std;
 
-namespace heap_data {
-  // i like to use a main namespace to share some variables between functions
-  char version[10] = "1.0";
-  unsigned int tree_size = 1; // triple this when you reach another max depth
-  unsigned int tree[2] = {0}; // this is unwrapped, and index 1 will be treated as index 0
-};
-using namespace heap_data;
-
-
-int add_to_next(int index, unsigned int num){
-  // this is recursive, and will repeatedly go down the tree until it finds space
-  // it won't look for the highest-available space, instead it will only look through 1 chain
-  unsigned int parent_index = floor(index / 2);
-  if ((parent_index != 0) && (tree[parent_index] < num)){ // parent isn't the first index, AND bigger than parent
-    return -1; // this should only come up if there is no space, so it needs resizing
-  }
-  // from now on, assume the PARENT is valid!
-  if (index * 2 <= tree_size){
-    if ((tree[index*2] < num) && (tree[index*2 + 1] < num)){
-      // both children are lower
-      if (tree[index] == 0){ // check for empty space
-	tree[index] = num;
-	return 1; // success!
-      }
-    } else {
-      // one or more children is higher, go down the tree
-      return add_to_next(floor(index / 2), num);
-    }
+namespace studentlist{
+  // public objects for this program
+  char version[20] = "1.0.1";
+  Node* headptr = new Node(nullptr); // this is the first in the linked list, and will not be printed or deleteable
+}
+using namespace studentlist;
+// NODE FUNCTIONS
+void node_add_student(Student*student, Node*ptr){
+  // adds student to the end of the linked list
+  if (ptr->getNext() == nullptr){
+    Node* newptr = new Node(student);
+    ptr->setNext(newptr);
   } else {
-    // this is the end of the chain! assuming it's empty (it should be?), this space should be good to use
-    if (tree[index] == 0){
-      tree[index] = num;
-      return 1; // success
-    }
+    node_add_student(student, ptr->getNext());
   }
-  return 0; // miscellaneous error
+}
+
+void print_remaining(Node*ptr, int i){
+  // prints the next node and all the nodes after it
+  if (ptr == nullptr){
+    return;
+  }
+  // this part only runs if the pointer exists
+  Student* student = ptr->getStudent();
+  cout << i << ") ";
+  cout << student->name1 << ' ' << student->name2 << ", ";
+  cout << student->id << ", ";
+  cout << student->gpa << "\n";
+  i++;
+  print_remaining(ptr->getNext(), i);
+
+}
+
+float average(Node*ptr, float total, int count){
+  // add up the average and divide by count if it's the last one
+  if (ptr == nullptr){
+    if (count == 0){ // avoid division by 0
+      return 0;
+    }
+    float average = round((total / count) * 100) / 100;
+    return average;
+  }
+  total += ptr->getStudent()->gpa;
+  return average(ptr->getNext(), total, count+1);
+}
+// END OF NODE FUNCTIONS
+
+void print(const char* text = ""){
+  // cout wrapper, similar to python print()
+  cout << text << '\n' << flush;
+  return;
+}
+
+char* input(const char* text = ""){
+  // cin wrapper, similar to python input()
+  cout << text << flush;
+  char* input1 = new char[81]; // handle up to 80 chars (dynamically allocate, i actually forgot what this meant on the test)
+  cin >> input1;
+  return input1;
+}
+
+void add_student(){
+  // adds a student based on user input
+  char* pEnd; // this is needed for some low-level memory stuff in strtol and strtof
+  char name1[81]; strcpy(name1, input("Enter the student's first name: ")); // does this break style? the function was already bulky so i wanted to combine like terms
+  char name2[81]; strcpy(name2, input("Enter the student's last name: "));
+  char* id = input("Enter the student ID: ");
+  int id1 = strtol(id, &pEnd, 10); // cast to int
+  char* gpa = input("Enter the student's GPA: ");
+  float gpa1 = strtof(gpa, &pEnd); // cast to float
+  float gpa2 = round(100 * gpa1) / 100; // round to 2 decimal points
+  Student* student = new Student; // to keep it in memory after this scope ends; be sure to free this memory when it gets deleted
+  strcpy(student->name1, name1);
+  strcpy(student->name2, name2);
+  student->id = id1; // id
+  student->gpa = gpa2; // gpa
+  node_add_student(student, headptr); // new function
+  return;
+}
+
+void print_students(){
+  // print the students that are stored
+  print("Student list:");
+  short i = 1;
+  Node* ptr = studentlist::headptr;
+  print_remaining(headptr->getNext(), i);
+  cout << flush;
+  return;
+}
+
+void delete_student_with_id(Node* lastptr, Node* ptr, int id){
+  // try to delete this student, or move on to the next
+  Student* student = ptr->getStudent();
+  if (student->id == id){
+    cout << "Removing " << student->name1 << ' ' << student->name2 << "..." << endl;
+    lastptr->setNext(ptr->getNext());
+    delete ptr;
+  } else {
+    if (ptr->getNext() == nullptr){
+      cout << "Student not found." << endl;
+      return;
+    }
+    delete_student_with_id(ptr, ptr->getNext(), id);
+  }
 }
 
 
-void add_to_tree(unsigned int num){
-  // look for a valid spot, then add to the tree
-  bool put_at_trunk = false;
-  for (int i = 1; i < tree_size + 1; i++){
-    if (tree[i] == 0){ // spot found
-      int code = add_to_next(i, num);
-      if (code == 1){ // success
-	return;
-      } else if (code == -1){
-	put_at_trunk = true; // this needs to go at the top
-      }
-    }
-  }
-  // there isn't enough space, triple the tree's size
-  tree_size *= 3;
+void delete_student(){
+  // remove a student at a point
+  print_students();
+  char* pEnd;
+  char* indexstr = input("Enter the student ID to delete: ");
+  int index = strtol(indexstr, &pEnd, 10); // cast to int
+  Node* ptr = headptr->getNext();
+  Node* lastptr = headptr;
+  delete_student_with_id(lastptr, ptr, index); // new function
+}
   
-}
-
-
 int main(){
-  cout << "Heap / Binary Tree - Version " << version << endl;
+  print("Student List - 10/9/25");
+  print("Welcome! Type 'HELP' for a list of commands.");
+  bool running = 1;
+  while (running){ // main loop
+    const char* cmd = input("$ ");
+    // command list starts here
+    if (strcmp(cmd, "HELP") == 0){ // HELP
+      print("HELP: print list of commands");
+      print("QUIT: quit this program");
+      print("ADD: add a student");
+      print("PRINT: print all the students currently stored");
+      print("DELETE: delete a student");
+      print("AVERAGE: get GPA average");
+    }
+    if (strcmp(cmd, "QUIT") == 0){ // QUIT
+      running = 0; // program will stop after completing this loop
+      print("Goodbye!");
+    }
+    if (strcmp(cmd, "ADD") == 0){ // ADD
+      add_student();
+    }
+    if (strcmp(cmd, "PRINT") == 0){ // PRINT
+      print_students();
+    }
+    if (strcmp(cmd, "DELETE") == 0){ // DELETE
+      delete_student();
+    }
+    if (strcmp(cmd, "AVERAGE") == 0){ // AVERAGE
+      float average1 = average(headptr->getNext(), 0, 0);
+      cout << average1 << endl;
+    }
+  }
   return 0;
 }
