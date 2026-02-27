@@ -4,17 +4,18 @@
 #include <fstream>
 #include <cmath> // for round()
 #include <cstring> // for numerous functions (useless comment, i know)
-#include <string>
+#include <string> // first time using std::string, also for stoi()
 // apparently i might not actually need nodes for this
-// one major problem with this data structure i can think of off the top of my head, is that it doesn't handle collisions very well, especially near the bottom of the tree. 
+// one major problem with this data structure i can think of off the top of my head, is that it doesn't handle collisions very well, especially near the bottom of the tree.
+// UPDATE February 27: this is deceptively hard, and i am adding way more comments than I usually do, since there is no way i would understand this code after i make it
 
 using namespace std;
 
 
 namespace heap_data {
   // i like to use a main namespace to share some variables between functions
-  const char version[10] = "1.4";
-  const unsigned int tree_size = 100; // this is extraneous and just exists to remind me
+  const char version[10] = "1.6";
+  const unsigned int tree_size = 100;
   unsigned int tree[101] = {0}; // this is unwrapped, and index 1 will be treated as index 0, since you can't double index 0 to get its children!
   // i could also just add 1 to the index when doing math, and it would have an absolutely negligible effect on both memory and performance, so why am i mentioning this?
 };
@@ -52,7 +53,7 @@ int add_to_next(int index, unsigned int num){
   if (child_index <= tree_size){
     return add_to_next(child_index, num);
   }
-  return -1; // no space!
+  return -1; // no space in this chain!
 }
 
 bool is_digit2(char c){
@@ -63,21 +64,14 @@ bool is_digit2(char c){
 }
 
 
-void add_to_tree(unsigned int num){
+int add_to_tree(unsigned int num){
   // look for a valid spot, then add to the tree
-  bool put_at_trunk = false;
   for (int i = 1; i < tree_size + 1; i++){
     if (tree[i] == 0){ // spot found
-      int code = add_to_next(i, num);
-      if (code == 1){ // success
-	return;
-      } else if (code == -1){
-	put_at_trunk = true; // this needs to go at the top
-      }
+      return add_to_next(i, num);
     }
   }
-  cout << "Couldn't find a spot! This either means you are out of space, or my code has a bug." << endl;
-  return; // this probably means it ran out of space, but there won't be any resizing logic in this progam.
+  return -1; // this probably means it ran out of space, but there won't be any resizing logic in this progam.
 }
 
 
@@ -97,15 +91,65 @@ int main(){
       cout << "HELP: returns a list of commands (you knew that!)" << endl;
       cout << "QUIT: quits the program" << endl;
       cout << "LOAD: loads integers from a (plaintext) file" << endl;
+      cout << "ADD: add numbers manually";
     } else if (input == "LOAD"){ // load
       cout << "Enter the filename (max 80 chars): " << flush;
       string input;
       cin >> input;
       ifstream file(input);
-      char file_text[401]; // QUICK MATH says that 400 should be above the max length of such a file
+      char file_text_array[401] = ""; // this should be above the max size
       // now, find out how to get data from file
-      file.getline(file_text, 401);
-      int numbers[100];
+      file.getline(file_text_array, 401);
+      string file_text(file_text_array);
+      if (file_text.length() == 0){
+	cout << "Error: " << input << " not found in current folder; maybe there's a typo?" << endl;
+      } else {
+	// i WOULD delete file_text_array here, but i think it will go out of scope soon anyway?
+	// have to parse data manually, since i can't find a function to do this for me
+	int string_index = 0;
+	for (int i = 0; i < 100; i++){
+	  if (string_index < file_text.length()){
+	    string current_num = "";
+	    int j = 0;
+	    // individual numbers
+	    while ((file_text[string_index] != ' ') && (j < 4)){
+	      current_num.append(1, file_text[string_index]); // append this char once
+	      string_index += 1;
+	      j++;
+	  }
+	    string_index += 1;
+	    int input_int = stoi(current_num);
+	    int add_result = add_to_tree(input_int);
+	    if (add_result == 1){
+	      cout << "Added num " << input_int << endl;
+	    } else if (add_result == -1){
+	      cout << "Out of space!" << endl;
+	    } else {
+	      cout << "There was an error; that's all I know." << endl;
+	    }
+	  }
+	  cout << "Done!" << endl;
+	}
+      }
+    } else if (input == "ADD"){ // ADD
+      cout << "Type 'QUIT' to stop adding numbers." << endl;
+      string input1 = "";
+      while (input1 != "QUIT"){ // keep going until they want to stop
+	cout << "$ Add this number: " << flush;
+	cin >> input1;
+	if (input1 != "QUIT"){
+	  int input_int = stoi(input1); // this might be the best function ever made, finally being able to cast this way after so long in C++ is like finally being able to breathe through my nostrils after i got the flu two weeks ago
+	  int add_result = add_to_tree(input_int);
+	  if (add_result == 1){
+	    cout << "Added num " << input_int << endl;
+	  } else if (add_result == -1){
+	    cout << "Out of space!" << endl;
+	  } else {
+	    cout << "There was an error; that's all I know." << endl;
+	  }
+	}
+      }
+      // end of loop
     }
   }
 }
