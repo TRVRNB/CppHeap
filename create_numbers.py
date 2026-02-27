@@ -12,6 +12,7 @@ for i in range(100):
 	num = random.randint(1, 1000)
 	while num in used_numbers: # keep looking; there will always be an available number
 		num = random.randint(1, 1000)
+	used_numbers.append(num) # was dumb, forgot this earlier
 	data += str(num) # add this to the line
 	if i != 99: # add space if it's not the last number
 		data += " "

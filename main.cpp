@@ -13,7 +13,7 @@ using namespace std;
 
 namespace heap_data {
   // i like to use a main namespace to share some variables between functions
-  const char version[10] = "1.3";
+  const char version[10] = "1.4";
   const unsigned int tree_size = 100; // this is extraneous and just exists to remind me
   unsigned int tree[101] = {0}; // this is unwrapped, and index 1 will be treated as index 0, since you can't double index 0 to get its children!
   // i could also just add 1 to the index when doing math, and it would have an absolutely negligible effect on both memory and performance, so why am i mentioning this?
@@ -22,35 +22,38 @@ using namespace heap_data;
 
 
 int add_to_next(int index, unsigned int num){
-  // REDO THIS FUNCTION! it has multiple errors now that i look it over, and doesn't even meet the requirements of the assignment
   // this is recursive, and will repeatedly go down the tree until it finds space
-  // it won't look for the highest-available space, instead it will only look through 1 chain
-  unsigned int parent_index = floor(index / 2);
-  if ((parent_index != 0) && (tree[parent_index] < num)){ // parent isn't the first index, AND bigger than parent
-    return -1; // this should only come up if there is no space, so it needs resizing
+  // 1: success
+  // -1: no space
+  // -2: etc.
+  if (index > tree_size){
+    return -1;
   }
-  // from now on, assume the PARENT is valid!
-  if (index * 2 <= tree_size){
-    if ((tree[index*2] < num) && (tree[index*2 + 1] < num)){
-      // both children are lower
-      if (tree[index] == 0){ // check for empty space
-	tree[index] = num;
-	return 1; // success!
-      }
-    } else {
-      // one or more children is higher, go up the tree
-      return add_to_next(index * 2, num);
-    }
-  } else {
-    // this is the end of the chain! assuming it's empty (it should be?), this space should be good to use
-    if (tree[index] == 0){
-      tree[index] = num;
-      return 1; // success
+  if (index != 1){ // anything BUT root
+    unsigned int parent_index = floor(index / 2);
+    if (tree[parent_index] < num){ // parent is smaller, not allowed
+      return -2; // since there's no resizing... oh well? you could look through another chain instead
     }
   }
-  return 0; // miscellaneous error
+  // from now on, assume the parent EXISTS and is VALID
+  if (tree[index] == 0){ // is empty
+    tree[index] = num;
+    return 1; // success!
+  }
+  // from now on, assume the current slot isn't valid, so needd to look for a new one
+  int child_index = index * 2 + 1; // start on child 2
+  if (child_index <= tree_size){
+    int adding_result = add_to_next(child_index, num);
+    if (adding_result != -1){
+      return adding_result;
+    }
+  }
+  child_index -= 1;
+  if (child_index <= tree_size){
+    return add_to_next(child_index, num);
+  }
+  return -1; // no space!
 }
-
 
 bool is_digit2(char c){
   // en.cppreference.com/w/cppp/string/byte/isdigit.html
@@ -100,8 +103,9 @@ int main(){
       cin >> input;
       ifstream file(input);
       char file_text[401]; // QUICK MATH says that 400 should be above the max length of such a file
-      file.getline(file_text); // file_text should now have file's data
-
+      // now, find out how to get data from file
+      file.getline(file_text, 401);
+      int numbers[100];
     }
   }
 }
