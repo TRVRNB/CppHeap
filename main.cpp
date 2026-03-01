@@ -14,7 +14,7 @@ using namespace std;
 
 namespace heap_data {
   // i like to use a main namespace to share some variables between functions
-  const char version[10] = "1.6";
+  const char version[10] = "1.7";
   const unsigned int tree_size = 100;
   unsigned int tree[101] = {0}; // this is unwrapped, and index 1 will be treated as index 0, since you can't double index 0 to get its children!
   // i could also just add 1 to the index when doing math, and it would have an absolutely negligible effect on both memory and performance, so why am i mentioning this?
@@ -41,12 +41,12 @@ int add_to_next(int index, unsigned int num){
     tree[index] = num;
     return 1; // success!
   }
-  // from now on, assume the current slot isn't valid, so needd to look for a new one
+  // from now on, assume the current slot isn't valid, so need to look for a new one
   int child_index = index * 2 + 1; // start on child 2
   if (child_index <= tree_size){
-    int adding_result = add_to_next(child_index, num);
-    if (adding_result != -1){
-      return adding_result;
+    int add_result = add_to_next(child_index, num);
+    if (add_result != -1){
+      return add_result;
     }
   }
   child_index -= 1;
@@ -66,12 +66,50 @@ bool is_digit2(char c){
 
 int add_to_tree(unsigned int num){
   // look for a valid spot, then add to the tree
-  for (int i = 1; i < tree_size + 1; i++){
+  for (int i = 1; i <= tree_size; i++){
     if (tree[i] == 0){ // spot found
-      return add_to_next(i, num);
+      int add_result = add_to_next(i, num);
+      if (add_result == 1){
+        return 1; // everything's still cool here officer!
+      }
     }
   }
-  return -1; // this probably means it ran out of space, but there won't be any resizing logic in this progam.
+  // from now on, assume there isn't enough space!
+  int sorted_array[1000]{0};
+  sorted_array[num] = 1;
+  for (unsigned int num : tree){
+    // side note: i somehow didn't realize this wasn't vector-exclusive, after 6.5 months of this language... so, i'm just gonna do this from now on, instead of my for int i = 1 i ++ etc.
+    if (num != 0){
+      sorted_array[num-1] += 1;
+    }
+  }
+  // reset tree
+  for (int j = 1; j < 101; j++){
+    tree[j] = 0;
+  }
+  // now, i have a (very simple) hash table of ints, time to heapify them!
+  int num1 = 1000;
+  // add the highest num first
+  while (sorted_array[num1-1] == 0){
+    num1--;
+  }
+  tree[1] = num1;
+  // all others now!
+  for (int num = num1 - 1; num > 0; num--){
+    for (int j = 0; j < sorted_array[num-1]; j++){
+      bool spot_found = false;
+      for (int i = 1; i <= tree_size; i++){
+        if (!spot_found){
+          spot_found = (add_to_next(i, num) == 1);
+        }
+      }
+      if (!spot_found){ // no space found, even after resort... not enough space
+        return -1;
+      }
+    }
+  }
+  // OKAY! if it has worked until now... it should be done!!
+  return 1;
 }
 
 
@@ -138,15 +176,17 @@ int main(){
 	cout << "$ Add this number: " << flush;
 	cin >> input1;
 	if (input1 != "QUIT"){
-	  int input_int = stoi(input1); // this might be the best function ever made, finally being able to cast this way after so long in C++ is like finally being able to breathe through my nostrils after i got the flu two weeks ago
-	  int add_result = add_to_tree(input_int);
-	  if (add_result == 1){
+      if (is_digit2(input1[0])){
+        int input_int = stoi(input1); // this might be the best function ever made, finally being able to cast this way after so long in C++ is like finally being able to breathe through my nostrils after i got the flu two weeks ago
+        int add_result = add_to_tree(input_int);
+        if (add_result == 1){
 	    cout << "Added num " << input_int << endl;
-	  } else if (add_result == -1){
-	    cout << "Out of space!" << endl;
-	  } else {
-	    cout << "There was an error; that's all I know." << endl;
-	  }
+        } else if (add_result == -1){
+          cout << "Out of space!" << endl;
+        } else {
+          cout << "There was an error; maybe it's a repeat?" << endl;
+        }
+      }
 	}
       }
       // end of loop
