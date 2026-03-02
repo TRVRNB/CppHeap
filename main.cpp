@@ -3,7 +3,6 @@
 #include <iostream>
 #include <fstream>
 #include <cmath> // for round()
-#include <cstring> // for numerous functions (useless comment, i know)
 #include <string> // first time using std::string, also for stoi()
 // apparently i might not actually need nodes for this
 // one major problem with this data structure i can think of off the top of my head, is that it doesn't handle collisions very well, especially near the bottom of the tree.
@@ -14,7 +13,7 @@ using namespace std;
 
 namespace heap_data {
   // i like to use a main namespace to share some variables between functions
-  const char version[10] = "1.9";
+  const char version[10] = "1.10";
   const unsigned int array_size = 100;
   unsigned int tree_size = 0; // okay, i'm confused by something. the assignment says "up to 100 numbers will be stored", but also mentions changing the tree size? but what would that even do, if it's just going to parse the same array no matter how many numbers there are? i'll still store it, but i can't think of a use for this variable (other than remove all)
   unsigned int tree[101] = {0}; // this is unwrapped, and index 1 will be treated as index 0, since you can't double index 0 to get its children!
