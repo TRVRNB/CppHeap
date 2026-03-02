@@ -14,46 +14,45 @@ using namespace std;
 
 namespace heap_data {
   // i like to use a main namespace to share some variables between functions
-  const char version[10] = "1.8";
-  const unsigned int tree_size = 100;
+  const char version[10] = "1.9";
+  const unsigned int array_size = 100;
+  unsigned int tree_size = 0; // okay, i'm confused by something. the assignment says "up to 100 numbers will be stored", but also mentions changing the tree size? but what would that even do, if it's just going to parse the same array no matter how many numbers there are? i'll still store it, but i can't think of a use for this variable (other than remove all)
   unsigned int tree[101] = {0}; // this is unwrapped, and index 1 will be treated as index 0, since you can't double index 0 to get its children!
   // i could also just add 1 to the index when doing math, and it would have an absolutely negligible effect on both memory and performance, so why am i mentioning this?
 };
 
 
-int add_to_next(int index, unsigned int num){
+int add_to_tree(unsigned short num){
   using namespace heap_data;
-  // this is recursive, and will repeatedly go down the tree until it finds space
+  // i don't actually know if this follows the rules of the assignment, i can't really wrap my head around it... but it at least works!
+  // unlike the previous version (see commits) this actually goes down the tree repeatedly until it finds a valid space
+  // (i spent over an hour debugging that earlier today, only to realize i did it wrong, the new function is MUCH smaller!)
+  // (so... i could've easily finished this 2 days ago if i was smarter)
   // 1: success
   // -1: no space
-  // -2: etc.
-  if (index > tree_size){
+  unsigned int index = 1;
+  while (index <= array_size && tree[index] != 0){
+    index++;
+  }
+  if (index > array_size){ // no space left, sorry!
     return -1;
   }
-  if (index != 1){ // anything BUT root
-    unsigned int parent_index = floor(index / 2);
-    if (tree[parent_index] < num){ // parent is smaller, not allowed
-      return -2; // since there's no resizing... oh well? you could look through another chain instead
-    }
+  tree[index] = num;
+  // keep swapping until parent is larger
+  while (index > 1){ // keep going until at root, at root = ok!
+   int parent_index = floor(index / 2);
+   if (tree[parent_index] < tree[index]){ // parent is bigger
+     unsigned short parent_num = tree[parent_index];
+     tree[parent_index] = tree[index];
+     tree[index] = parent_num;
+     index = parent_index; // move up the ladder!
+   } else {
+     tree_size += 1;
+     return 1;
+   }
   }
-  // from now on, assume the parent EXISTS and is VALID
-  if (tree[index] == 0){ // is empty
-    tree[index] = num;
-    return 1; // success!
-  }
-  // from now on, assume the current slot isn't valid, so need to look for a new one
-  int child_index = index * 2 + 1; // start on child 2
-  if (child_index <= tree_size){
-    int add_result = add_to_next(child_index, num);
-    if (add_result != -1){
-      return add_result;
-    }
-  }
-  child_index -= 1;
-  if (child_index <= tree_size){
-    return add_to_next(child_index, num);
-  }
-  return -1; // no space in this chain!
+  tree_size += 1;
+  return 1;
 }
 
 bool is_digit2(char c){
@@ -63,60 +62,10 @@ bool is_digit2(char c){
   return isdigit(static_cast<unsigned char>(c));
 }
 
-
-int add_to_tree(unsigned int num){
-  using namespace heap_data;
-  // look for a valid spot, then add to the tree
-  for (int i = 1; i <= tree_size; i++){
-    if (tree[i] == 0){ // spot found
-      int add_result = add_to_next(i, num);
-      if (add_result == 1){
-        return 1; // everything's still cool here officer!
-      }
-    }
-  }
-  // from now on, assume there isn't enough space!
-  int sorted_array[1000]{0};
-  sorted_array[num] = 1;
-  for (unsigned int num : tree){
-    // side note: i somehow didn't realize this wasn't vector-exclusive, after 6.5 months of this language... so, i'm just gonna do this from now on, instead of my for int i = 1 i ++ etc.
-    if (num != 0){
-      sorted_array[num-1] += 1;
-    }
-  }
-  // reset tree
-  for (int j = 1; j < 101; j++){
-    tree[j] = 0;
-  }
-  // now, i have a (very simple) hash table of ints, time to heapify them!
-  int num1 = 1000;
-  // add the highest num first
-  while (sorted_array[num1-1] == 0){
-    num1--;
-  }
-  tree[1] = num1;
-  // all others now!
-  for (int num = num1 - 1; num > 0; num--){
-    for (int j = 0; j < sorted_array[num-1]; j++){
-      bool spot_found = false;
-      for (int i = 1; i <= tree_size; i++){
-        if (!spot_found){
-          spot_found = (add_to_next(i, num) == 1);
-        }
-      }
-      if (!spot_found){ // no space found, even after resort... not enough space
-        return -1;
-      }
-    }
-  }
-  // OKAY! if it has worked until now... it should be done!!
-  return 1;
-}
-
 void add_to_print_heap(short heap_index, short index, short recursion, string* ordered_heap){
   using namespace heap_data;
   // recursive function, adds to the printed version of the heap and then tries to add children
-  if (heap_index > tree_size){
+  if (heap_index > array_size){
     return;
   }
   int num = tree[heap_index];
@@ -154,6 +103,50 @@ void print_heap(){
   delete[] ordered_heap; // no need for this anymore
 }
 
+void remove_root(){
+  using namespace heap_data;
+  // remove the root
+  // swap it with the bottom-right number, then repeatedly move it up until it is bigger than both children
+  cout << tree[1] << endl;
+  // look for bottom right leaf
+  int index = array_size;
+  while (tree[index] == 0 && index != 0){
+    index--;
+  }
+  if (index == 0){
+    return; // the heap is empty
+  }
+  unsigned int num = tree[index];
+  tree[1] = num;
+  tree[index] = 0;
+  tree_size -= 1;
+  // now, repeatedly swap it with the larger child until the parent condition is satisfied
+  index = 1;
+  int old_index;
+  bool run_loop = true;
+  while (run_loop){
+    int child1 = index * 2;
+    int child2 = index * 2 + 1;
+    if (child2 > array_size){ // out of bounds?
+      tree[index] = num;
+      run_loop = false;
+    } else { // still in bounds
+      old_index = index;
+      if (tree[child1] > num || tree[child2] > num){
+        if (tree[child1] > tree[child2]){
+          index = child1;
+        } else {
+          index = child2;
+        }
+      tree[old_index] = tree[index]; // swap (part 1)
+      } else { // this spot works!
+        tree[index] = num; // swap (part 2)
+        run_loop = false;
+      }
+    }
+  }
+}
+
 
 int main(){
   using namespace heap_data;
@@ -173,7 +166,8 @@ int main(){
       cout << "QUIT: quits the program" << endl;
       cout << "LOAD: loads integers from a (plaintext) file" << endl;
       cout << "ADD: add numbers manually" << endl;
-      cout << "DELETE: delete a number from the heap" << endl;
+      cout << "REMOVE: delete the root from the heap" << endl;
+      cout << "REMOVEALL: delete everything, from root, repeatedly" << endl;
     } else if (input == "LOAD"){ // load
       cout << "Enter the filename (max 80 chars): " << flush;
       string input;
@@ -225,11 +219,9 @@ int main(){
             if (0 < input_int && input_int <= 1000){
               int add_result = add_to_tree(input_int);
               if (add_result == 1){
-              cout << "Added num " << input_int << endl;
+                cout << "Added num " << input_int << endl;
               } else if (add_result == -1){
                 cout << "Out of space!" << endl;
-              } else {
-                cout << "There was an error; maybe it's a repeat?" << endl;
               }
             }
           }
@@ -238,6 +230,13 @@ int main(){
       // end of loop
     } else if (input == "PRINT"){ // PRINT
       print_heap();
+    } else if (input == "REMOVE"){ // REMOVE
+      remove_root();
+    } else if (input == "REMOVEALL"){ // REMOVEALL
+      unsigned short old_tree_size = tree_size;
+      for (int i = 0; i < old_tree_size; i++){
+        remove_root();
+      };
     }
   }
 }
