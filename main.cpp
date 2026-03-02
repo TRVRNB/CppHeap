@@ -14,15 +14,15 @@ using namespace std;
 
 namespace heap_data {
   // i like to use a main namespace to share some variables between functions
-  const char version[10] = "1.7";
+  const char version[10] = "1.8";
   const unsigned int tree_size = 100;
   unsigned int tree[101] = {0}; // this is unwrapped, and index 1 will be treated as index 0, since you can't double index 0 to get its children!
   // i could also just add 1 to the index when doing math, and it would have an absolutely negligible effect on both memory and performance, so why am i mentioning this?
 };
-using namespace heap_data;
 
 
 int add_to_next(int index, unsigned int num){
+  using namespace heap_data;
   // this is recursive, and will repeatedly go down the tree until it finds space
   // 1: success
   // -1: no space
@@ -57,7 +57,7 @@ int add_to_next(int index, unsigned int num){
 }
 
 bool is_digit2(char c){
-  // en.cppreference.com/w/cppp/string/byte/isdigit.html
+  // en.cppreference.com/w/cpp/string/byte/isdigit.html
   // this is just a more convenient std::isdigit, since it works with regular chars
   // and returns a bool instead of an int
   return isdigit(static_cast<unsigned char>(c));
@@ -65,6 +65,7 @@ bool is_digit2(char c){
 
 
 int add_to_tree(unsigned int num){
+  using namespace heap_data;
   // look for a valid spot, then add to the tree
   for (int i = 1; i <= tree_size; i++){
     if (tree[i] == 0){ // spot found
@@ -112,8 +113,50 @@ int add_to_tree(unsigned int num){
   return 1;
 }
 
+void add_to_print_heap(short heap_index, short index, short recursion, string* ordered_heap){
+  using namespace heap_data;
+  // recursive function, adds to the printed version of the heap and then tries to add children
+  if (heap_index > tree_size){
+    return;
+  }
+  int num = tree[heap_index];
+  if (num == 0){
+    return;
+  }
+  string new_string = to_string(recursion) + ") ";
+  new_string.append(recursion, '\t');
+  new_string += to_string(num);
+  ordered_heap[index] = new_string;
+  unsigned short child_distance = 32 / pow(2, recursion);
+  // now try to add children!
+  add_to_print_heap(heap_index * 2 + 1, index + child_distance, recursion + 1, ordered_heap);
+  add_to_print_heap(heap_index * 2, index - child_distance, recursion + 1, ordered_heap);
+}
+
+void print_heap(){
+  using namespace heap_data;
+  // print it out
+  // the trunk will be in the center, with its branches being 32 spaces away, then 16, then 8, etc.
+  // i think it will be best to turn this into an array of strings, which will then be compiled into one big string, which will be printed out
+  string* ordered_heap = new string[127];
+  // 100 is actually a bad size for this; since the next branch is always twice as big as the previous branch, the amount of slots can be represented by 2^n - 1, where n is the amount of branches (including root)
+  // 127 is better since it perfectly fits 7 branches, even though there aren't 7 complete branches. extraneous data will be wiped off anyway!
+  // basically, this is just binary, or at least what i remember from a few years ago
+  add_to_print_heap(1, 64, 0, ordered_heap);
+  string heap_string = "";
+  for (int i = 0; i < 127; i++){
+    if (ordered_heap[i] != ""){
+      heap_string += ordered_heap[i];
+      heap_string.append(1, '\n');
+    }
+  }
+  cout << heap_string << endl;
+  delete[] ordered_heap; // no need for this anymore
+}
+
 
 int main(){
+  using namespace heap_data;
   cout << "Heap / Binary Tree - Version " << version << endl;
   cout << "https://github.com/TRVRNB/CppHeap.git" << endl;
   cout << "Type 'HELP' for a list of commands." << endl;
@@ -129,7 +172,8 @@ int main(){
       cout << "HELP: returns a list of commands (you knew that!)" << endl;
       cout << "QUIT: quits the program" << endl;
       cout << "LOAD: loads integers from a (plaintext) file" << endl;
-      cout << "ADD: add numbers manually";
+      cout << "ADD: add numbers manually" << endl;
+      cout << "DELETE: delete a number from the heap" << endl;
     } else if (input == "LOAD"){ // load
       cout << "Enter the filename (max 80 chars): " << flush;
       string input;
@@ -173,23 +217,27 @@ int main(){
       cout << "Type 'QUIT' to stop adding numbers." << endl;
       string input1 = "";
       while (input1 != "QUIT"){ // keep going until they want to stop
-	cout << "$ Add this number: " << flush;
-	cin >> input1;
-	if (input1 != "QUIT"){
-      if (is_digit2(input1[0])){
-        int input_int = stoi(input1); // this might be the best function ever made, finally being able to cast this way after so long in C++ is like finally being able to breathe through my nostrils after i got the flu two weeks ago
-        int add_result = add_to_tree(input_int);
-        if (add_result == 1){
-	    cout << "Added num " << input_int << endl;
-        } else if (add_result == -1){
-          cout << "Out of space!" << endl;
-        } else {
-          cout << "There was an error; maybe it's a repeat?" << endl;
+        cout << "$ Add this number: " << flush;
+        cin >> input1;
+        if (input1 != "QUIT"){
+          if (is_digit2(input1[0])){
+            int input_int = stoi(input1); // this might be the best function ever made, finally being able to cast this way after so long in C++ is like finally being able to breathe through my nostrils after i got the flu two weeks ago
+            if (0 < input_int && input_int <= 1000){
+              int add_result = add_to_tree(input_int);
+              if (add_result == 1){
+              cout << "Added num " << input_int << endl;
+              } else if (add_result == -1){
+                cout << "Out of space!" << endl;
+              } else {
+                cout << "There was an error; maybe it's a repeat?" << endl;
+              }
+            }
+          }
         }
       }
-	}
-      }
       // end of loop
+    } else if (input == "PRINT"){ // PRINT
+      print_heap();
     }
   }
 }
